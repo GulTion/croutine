@@ -3,32 +3,111 @@ format ELF64
 CRO_NUMS = 10
 CRO_STACK_SIZE = 4096
 section '.text' executable
+public cro_init
+cro_init:
+    mov QWORD [cro_rsp_arr], rsp
+    mov QWORD [cro_rbp_arr], rbp
+    mov [cro_rip_arr], rsp
+    mov BYTE [cro_busy], 0x01
+    mov QWORD [real_rbp], rbp
+    mov QWORD [real_rsp], rsp
+
+    ret
+
+
 public cro_main
 cro_main:
 ; save real stack pointers
-    mov [real_rbp], rbp
-    mov [real_rsp], rsp
-; save function pointer
-    mov r11, rdi
-; swtich registors
-    mov rdi, rsi
-    mov rsi, rdx
-    mov rdx, rcx
-    mov rcx, r8
-    mov r8, r9
 
-; make new stack
-    mov rax, [cro_stack_current] ; i
+; find free stack slot
+    mov r10, 0
+.find_free_slot:
+    mov rax, [cro_current]
+    cmp rax, CRO_NUMS
+    jl .in_bounds
+    mov rax, 0
+    mov QWORD [cro_current], 0
+
+.in_bounds:
+    cmp BYTE [cro_busy + rax], 0
+    je .found_free
+
+    inc QWORD [cro_current]
+    inc r10
+    cmp r10, CRO_NUMS
+    jge .cro_error_max
+    jmp .find_free_slot
+.found_free:
+    ; mark this slot as busy
+    mov BYTE [cro_busy + rax], 1
+
+    ; calculate new stack pointers
+    mov r10, rax
     inc rax
     imul rax, rax, CRO_STACK_SIZE
     lea rsp, [cro_stack + rax]
     mov rbp, rsp
 
-; call function
+    ; preserve the slot index with 16B alignment
+    push r10
+    push r10
+
+    ; shifting function arguments
+    mov r11, rdi
+    mov rdi, rsi
+    mov rsi, rdx
+    mov rdx, rcx
+    mov rcx, r8
+    mov r8,  r9
+
+
     call r11
+    ; exact slot index used
+    pop r10
+    pop r10
+    mov BYTE [cro_busy + r10], 0    ; free THIS exact slot
+
 ; restore main's original stack pointers
     mov rsp, [real_rsp]
     mov rbp, [real_rbp]
+    ret
+
+.cro_error_max:
+    mov rsp, [real_rsp]
+    mov rbp, [real_rbp]
+    ret
+
+
+
+; swtich to another busy croutine
+public cro_yield
+cro_yield:
+; saving rsp, rbp, and rip of cro_current
+    mov rax, [cro_current]
+    mov QWORD [cro_rsp_arr + rax*8], rsp
+    mov QWORD [cro_rbp_arr + rax*8], rbp
+    mov r10, [rsp]
+    mov QWORD [cro_rip_arr + rax*8], r10
+
+; find free stack slot
+    mov r10, 0
+    mov rax, [cro_current]
+    inc rax
+.find_busy_slot:
+    cmp rax, CRO_NUMS
+    jl .in_bounds
+    mov rax, 0
+    mov QWORD [cro_current], 0
+
+.in_bounds:
+    cmp BYTE [cro_busy + rax], 0
+    jne .found_busy
+    inc rax
+    jmp .find_busy_slot
+.found_busy:
+    mov rsp, [cro_rsp_arr + rax*8]
+    mov rbp, [cro_rbp_arr + rax*8]
+    mov [cro_current], rax
     ret
 
 
@@ -38,8 +117,8 @@ exit:
     syscall
 
 section '.data' writeable
-msg: db "Hello C, i am croutine.s",0, 10
-msg_len = $ - msg
+cro_current:
+    dq 0
 
 section '.bss' writeable align 16
 real_rsp:
@@ -56,6 +135,5 @@ cro_rbp_arr:
     rq CRO_NUMS
 cro_rip_arr:
     rq CRO_NUMS
-public cro_stack
 cro_stack:
     rb CRO_NUMS * CRO_STACK_SIZE
