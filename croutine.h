@@ -3,3 +3,4 @@ int cro_main(void *fn, ...);
 
 void cro_yield(void);
 void cro_init(void);
+void cro_join(void);

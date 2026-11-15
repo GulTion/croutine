@@ -110,6 +110,26 @@ cro_yield:
     mov [cro_current], rax
     ret
 
+public cro_join
+cro_join:
+    mov rax, 0
+    mov rbx, 0
+.start:
+    cmp rax, CRO_NUMS
+    jge .final
+    cmp BYTE [cro_busy + rax], 0
+    inc rax
+    je .start
+    inc rbx
+    jmp .start
+
+.final:
+    cmp rbx, 1
+    je .exit
+    call cro_yield
+    jmp cro_join
+.exit:
+    ret
 
 exit:
     mov rdi, 0

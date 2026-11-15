@@ -20,6 +20,15 @@ int main(){
     cro_init();
     cro(counter, 10, "Croutine A");
     cro(counter, 10, "Croutine B");
+    cro(counter, 10, "Croutine C");
+    cro(counter, 10, "Croutine D");
+    cro(counter, 10, "Croutine E");
+    cro(counter, 10, "Croutine F");
+    cro(counter, 10, "Croutine G");
+    cro(counter, 10, "Croutine H");
+    cro(counter, 10, "Croutine I");
 
-    // cro_join();
+
+
+    cro_join();
 }
