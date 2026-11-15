@@ -68,8 +68,7 @@ cro_main:
     mov BYTE [cro_busy + r10], 0    ; free THIS exact slot
 
 ; restore main's original stack pointers
-    mov rsp, [real_rsp]
-    mov rbp, [real_rbp]
+    jmp cro_yield
     ret
 
 .cro_error_max:
@@ -118,9 +117,10 @@ cro_join:
     cmp rax, CRO_NUMS
     jge .final
     cmp BYTE [cro_busy + rax], 0
-    inc rax
-    je .start
+    je .skip_inc
     inc rbx
+.skip_inc:
+    inc rax
     jmp .start
 
 .final:
