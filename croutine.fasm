@@ -3,65 +3,33 @@ format ELF64
 CRO_NUMS = 10
 CRO_STACK_SIZE = 4096
 section '.text' executable
-public cro_init
-cro_init:
-    mov QWORD [cro_stack_current], 0
-    ; save real stack pointers
-    mov [real_rbp], rbp
-    mov [real_rsp], rsp
-    call cro_stack_current_begin
-    ; point to new stack frame
-    mov rbp, rax
-    mov rsp, rbp
-
-    ; push ret addr from real_rsp into rsp
-    mov rax, [real_rsp]
-    push rax
-    ret
-
-
-; Z = X + i*Y
-cro_stack_current_begin:
-    push rdi
-    mov rdi, [cro_stack_current] ; i
-    inc rdi
-    imul rax, rdi, CRO_STACK_SIZE
-    lea rax, [cro_stack + rax]
-    pop rdi
-    ret
-
-
-
-
-
 public cro
 cro:
 ; save real stack pointers
     mov [real_rbp], rbp
     mov [real_rsp], rsp
+; save function pointer
+    mov r11, rdi
 ; swtich registors
-    push rdi
     mov rdi, rsi
     mov rsi, rdx
-    mov rdx, r10
-    mov r10, r8
+    mov rdx, rcx
+    mov rcx, r8
     mov r8, r9
-    pop r9
+
 ; make new stack
-    call cro_stack_current_begin
-    mov rbp, rax
-    mov rsp, rbp
+    mov rax, [cro_stack_current] ; i
+    inc rax
+    imul rax, rax, CRO_STACK_SIZE
+    lea rsp, [cro_stack + rax]
+    mov rbp, rsp
 
-; push ret addr from real_rsp into rsp
-
-    call r9
-    mov rax, [real_rsp]
-    push QWORD [rax]
+; call function
+    call r11
+; restore main's original stack pointers
+    mov rsp, [real_rsp]
+    mov rbp, [real_rbp]
     ret
-
-cro_reg_switch:
-    ; number of arg : rsi
-
 
 
 exit:
