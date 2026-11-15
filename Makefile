@@ -4,8 +4,8 @@ all: main
 croutine.o: croutine.fasm
 	fasm croutine.fasm croutine.o
 
-main: main.c croutine.o
-	gcc -g -no-pie -z noexecstack main.c croutine.o -o main
+main: main.c croutine.o croutine.h
+	gcc -g -no-pie -z noexecstack main.c croutine.h croutine.o -o main
 
 FN ?= main
 

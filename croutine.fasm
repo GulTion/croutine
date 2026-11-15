@@ -3,8 +3,8 @@ format ELF64
 CRO_NUMS = 10
 CRO_STACK_SIZE = 4096
 section '.text' executable
-public cro
-cro:
+public cro_main
+cro_main:
 ; save real stack pointers
     mov [real_rbp], rbp
     mov [real_rsp], rsp
